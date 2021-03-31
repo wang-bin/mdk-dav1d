@@ -5,7 +5,7 @@
 #if __has_include("dav1d/dav1d.h")
 #include "dav1d/dav1d.h"
 #include <cassert>
-#include <cstdlib>
+#include "cppcompat/cstdlib.hpp"
 #if defined(_WIN32)
 # include <windows.h>
 # ifdef WINAPI_FAMILY
@@ -45,18 +45,27 @@ using dav1d_free_callback_t = void(*)(const uint8_t *buf, void *cookie);
 
 static auto load_dav1d(const char* mod = nullptr)->decltype(dlopen(nullptr, RTLD_LAZY))
 {
-    const auto dsoname =
+    const auto dso_default =
 #if (_WIN32+0)
         TEXT("libdav1d.dll")
 #elif (__APPLE__+0)
-        std::getenv("DAV1D_LIB") ? std::getenv("DAV1D_LIB") : "libdav1d.5.dylib"
+        "libdav1d.5.dylib"
 #elif (__ANDROID__+0)
         "libdav1d.so"
 #else
-        std::getenv("DAV1D_LIB") ? std::getenv("DAV1D_LIB") : "libdav1d.5.so"
+        "libdav1d.so.5"
 #endif
         ;
-    auto dso = dlopen(dsoname, RTLD_NOW | RTLD_LOCAL);
+    const auto dso_env_a = std::getenv("DAV1D_LIB");
+#if (_WIN32+0)
+    wchar_t dso_env_w[128+1]; // enough. strlen is not const expr
+    if (dso_env_a)
+        mbstowcs(dso_env_w, dso_env_a, strlen(dso_env_a)+1);
+    const auto dso_env = dso_env_a ? dso_env_w : nullptr;
+#else
+    const auto dso_env = dso_env_a;
+#endif
+    auto dso = dlopen(dso_env ? dso_env : dso_default, RTLD_NOW | RTLD_LOCAL);
     return dso;
 }
 
