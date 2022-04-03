@@ -1,12 +1,22 @@
 /*
- * Copyright (c) 2021 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2021-2022 WangBin <wbsecg1 at gmail.com>
  */
 
 #if __has_include("dav1d/dav1d.h")
+#include "dav1d/common.h"
+#undef DAV1D_API // visibility is "default"
+#define DAV1D_API
 #include "dav1d/dav1d.h"
 #include <cassert>
-#include "cppcompat/cstdlib.hpp"
+# if __has_include("cppcompat/cstdlib.hpp")
+#   include "cppcompat/cstdlib.hpp"
+# else
+#   include <cstdlib>
+# endif
 #if defined(_WIN32)
+# ifndef UNICODE
+#   define UNICODE 1
+# endif
 # include <windows.h>
 # ifdef WINAPI_FAMILY
 #  include <winapifamily.h>
@@ -34,26 +44,26 @@ using dav1d_free_callback_t = void(*)(const uint8_t *buf, void *cookie);
 #define DAV1D_ARG5(P1, P2, P3, P4, P5) (P1, P2, P3, P4, P5), (P1 p1, P2 p2, P3 p3, P4 p4, P5 p5), (p1, p2, p3, p4, p5)
 
 
-#define _DAV1D_API(...) DAV1D_API_EXPAND(__VA_ARGS__)
-#define DAV1D_API_EXPAND(R, F, ARG_T, ARG_T_V, ARG_V) \
+#define _DAV1D_API(R, NAME, ...) DAV1D_API_EXPAND(DAV1D_API_EXPAND_T_V(R, NAME, __VA_ARGS__))
+#define DAV1D_API_EXPAND(EXPR) EXPR
+#define DAV1D_API_EXPAND_T_V(R, F, ARG_T, ARG_T_V, ARG_V) \
     R F ARG_T_V { \
         static auto fp = (decltype(&F))dlsym(load_dav1d(), #F); \
         assert(fp && "Dav1d API NOT FOUND: " #F); \
         return fp ARG_V; \
     }
 
-
 static auto load_dav1d(const char* mod = nullptr)->decltype(dlopen(nullptr, RTLD_LAZY))
 {
-    const auto dso_default =
+    const auto name_default =
 #if (_WIN32+0)
         TEXT("libdav1d.dll")
 #elif (__APPLE__+0)
-        "libdav1d.5.dylib"
+        "libdav1d.6.dylib"
 #elif (__ANDROID__+0)
         "libdav1d.so"
 #else
-        "libdav1d.so.5"
+        "libdav1d.so.6"
 #endif
         ;
     const auto dso_env_a = std::getenv("DAV1D_LIB");
@@ -65,7 +75,21 @@ static auto load_dav1d(const char* mod = nullptr)->decltype(dlopen(nullptr, RTLD
 #else
     const auto dso_env = dso_env_a;
 #endif
-    auto dso = dlopen(dso_env ? dso_env : dso_default, RTLD_NOW | RTLD_LOCAL);
+    if (dso_env)
+        return dlopen(dso_env, RTLD_NOW | RTLD_LOCAL);
+    auto dso = dlopen(name_default, RTLD_NOW | RTLD_LOCAL);
+#if !(_WIN32+0) && !(__ANDROID__+0)
+    if (!dso) {
+        const auto name =
+# if (__APPLE__+0)
+        "libdav1d.5.dylib"
+# else
+        "libdav1d.so.5"
+# endif
+        ;
+        dso = dlopen(name, RTLD_NOW | RTLD_LOCAL);
+    }
+#endif
     return dso;
 }
 

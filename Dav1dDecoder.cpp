@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2021-2022 WangBin <wbsecg1 at gmail.com>
  * This file is part of MDK
  * MDK SDK: https://github.com/wang-bin/mdk-sdk
  * Free for opensource softwares or non-commercial use.
@@ -20,6 +20,12 @@
 #include "base/log.h"
 using namespace std;
 
+// api 6.x defines DAV1D_MAX_THREADS only
+#if (DAV1D_API_VERSION_MAJOR + 0) > 5
+#define DAV1D_MAX_FRAME_THREADS 256
+#define DAV1D_MAX_TILE_THREADS 64
+#define DAV1D_MAX_POSTFILTER_THREADS 256
+#endif
 MDK_NS_BEGIN
 
 // bpc = 8, 10 no 12
@@ -119,7 +125,10 @@ private:
 
 bool Dav1dDecoder::open()
 {
-    clog << LogLevel::Debug << fmt::to_string("dav1d build version: %d.%d.%d, runtime version: %s", DAV1D_API_VERSION_MAJOR, DAV1D_API_VERSION_MINOR, DAV1D_API_VERSION_PATCH , dav1d_version()) << endl;
+    clog << LogLevel::Debug << fmt::to_string("dav1d api build version: %d.%d.%d, runtime abi version: %s", DAV1D_API_VERSION_MAJOR, DAV1D_API_VERSION_MINOR, DAV1D_API_VERSION_PATCH , dav1d_version()) << endl;
+    const auto& par = parameters();
+    if (par.codec != "av1")
+        return false;
     Dav1dSettings s;
     dav1d_default_settings(&s);
     s.logger = {nullptr, [](void* cookie, const char* fmt, va_list vl) {
@@ -133,16 +142,28 @@ bool Dav1dDecoder::open()
             vamsg.pop_back();
         clog << "dav1d: " << vamsg << endl;
     }};
+    const int major = dav1d_version()[0] - '0';
     int threads = std::stoi(property("threads", "0"));
-    if (threads <= 0)
-        threads = thread::hardware_concurrency();
-    s.n_tile_threads = std::stoi(property("tile_threads", "0"));
-    if (s.n_tile_threads <= 0)
-        s.n_tile_threads = std::min<int>(floor(sqrt(threads)), DAV1D_MAX_TILE_THREADS);
-    s.n_frame_threads = std::stoi(property("frame_threads", "0"));
-    if (s.n_frame_threads <= 0)
-        s.n_frame_threads = std::min<int>(ceil(threads/s.n_tile_threads), DAV1D_MAX_FRAME_THREADS);
-    clog << fmt::to_string("frame threads: %d, tile threads: %d", s.n_frame_threads, s.n_tile_threads) << endl;
+    if (major > 0) {
+        auto s1 = (int*)&s;
+        auto& n_threads = s1[0];
+        n_threads = threads; // 0 is cpu cores
+        //auto& max_frame_delay = s1[1]; // 1: low latency
+    } else {
+        auto s0 = (int*)&s;
+        if (threads <= 0)
+            threads = thread::hardware_concurrency();
+        auto& n_tile_threads = s0[1];
+        n_tile_threads = std::stoi(property("tile_threads", "0"));
+        if (n_tile_threads <= 0)
+            n_tile_threads = std::min<int>((int)floor(sqrt(threads)), DAV1D_MAX_TILE_THREADS);
+        auto& n_frame_threads = s0[0];
+        n_frame_threads = std::stoi(property("frame_threads", "0"));
+        if (n_frame_threads <= 0)
+            n_frame_threads = std::min<int>(ceil(threads/n_tile_threads), DAV1D_MAX_FRAME_THREADS);
+        clog << fmt::to_string("frame threads: %d, tile threads: %d", n_frame_threads, n_tile_threads) << endl;
+    }
+    // dav1d_parse_sequence_header
     if (dav1d_open(&ctx_, &s) < 0) {
         return false;
     }
