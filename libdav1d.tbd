@@ -1,0 +1,19 @@
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ x86_64-macos, x86_64-maccatalyst, arm64-macos, arm64-maccatalyst,
+                   arm64e-macos, arm64e-maccatalyst, arm64-ios, arm64e-ios, armv7-ios, armv7s-ios,
+                   i386-ios-simulator, x86_64-ios-simulator, arm64-ios-simulator]
+install-name:    '@rpath/libdav1d.6.dylib'
+current-version: 6.6
+compatibility-version: 5.0
+exports:
+  - targets:         [ x86_64-macos, x86_64-maccatalyst, arm64-macos, arm64-maccatalyst,
+                       arm64e-macos, arm64e-maccatalyst, arm64-ios, arm64e-ios, armv7-ios, armv7s-ios,
+                       i386-ios-simulator, x86_64-ios-simulator, arm64-ios-simulator]
+    symbols:         [ _dav1d_apply_grain, _dav1d_close, _dav1d_data_create, _dav1d_data_props_unref,
+                       _dav1d_data_unref, _dav1d_data_wrap, _dav1d_data_wrap_user_data,
+                       _dav1d_default_settings, _dav1d_flush, _dav1d_get_decode_error_data_props,
+                       _dav1d_get_event_flags, _dav1d_get_picture, _dav1d_open, _dav1d_parse_sequence_header,
+                       _dav1d_picture_unref, _dav1d_send_data, _dav1d_set_cpu_flags_mask,
+                       _dav1d_version ]
+...
