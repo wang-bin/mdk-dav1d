@@ -8,6 +8,7 @@
 #define DAV1D_API
 #include "dav1d/dav1d.h"
 #include <cassert>
+#include <iostream>
 # if __has_include("cppcompat/cstdlib.hpp")
 #   include "cppcompat/cstdlib.hpp"
 # else
@@ -34,6 +35,7 @@
 #else
 # include <dlfcn.h>
 #endif
+using namespace std;
 
 using dav1d_free_callback_t = void(*)(const uint8_t *buf, void *cookie);
 #define DAV1D_ARG0() (), (), ()
@@ -48,12 +50,16 @@ using dav1d_free_callback_t = void(*)(const uint8_t *buf, void *cookie);
 #define DAV1D_API_EXPAND(EXPR) EXPR
 #define DAV1D_API_EXPAND_T_V(R, F, ARG_T, ARG_T_V, ARG_V) \
     R F ARG_T_V { \
-        static auto fp = (decltype(&F))dlsym(load_dav1d(), #F); \
-        assert(fp && "Dav1d API NOT FOUND: " #F); \
+        static auto fp = (decltype(&F))dlsym(load_once(), #F); \
+        if (!fp) \
+            return default_rv<R>(); \
         return fp ARG_V; \
     }
 
-static auto load_dav1d(const char* mod = nullptr)->decltype(dlopen(nullptr, RTLD_LAZY))
+template<typename T> T default_rv() {return {};}
+template<> void default_rv<void>() {}
+
+static auto load_dav1d()->decltype(dlopen(nullptr, RTLD_LAZY))
 {
     const auto name_default =
 #if (_WIN32+0)
@@ -78,18 +84,26 @@ static auto load_dav1d(const char* mod = nullptr)->decltype(dlopen(nullptr, RTLD
     if (dso_env)
         return dlopen(dso_env, RTLD_NOW | RTLD_LOCAL);
     auto dso = dlopen(name_default, RTLD_NOW | RTLD_LOCAL);
+    if (dso)
+        return dso;
+    clog << "Failed to load " << name_default << endl;
 #if !(_WIN32+0) && !(__ANDROID__+0)
-    if (!dso) {
-        const auto name =
+    const auto name =
 # if (__APPLE__+0)
         "libdav1d.5.dylib"
 # else
         "libdav1d.so.5"
 # endif
         ;
-        dso = dlopen(name, RTLD_NOW | RTLD_LOCAL);
-    }
+    clog << "Try to load " << name << endl;
+    dso = dlopen(name, RTLD_NOW | RTLD_LOCAL);
 #endif
+    return dso;
+}
+
+static auto load_once()
+{
+    static auto dso = load_dav1d();
     return dso;
 }
 

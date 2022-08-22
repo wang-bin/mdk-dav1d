@@ -125,7 +125,10 @@ private:
 
 bool Dav1dDecoder::open()
 {
-    clog << LogLevel::Debug << fmt::to_string("dav1d api build version: %d.%d.%d, runtime abi version: %s", DAV1D_API_VERSION_MAJOR, DAV1D_API_VERSION_MINOR, DAV1D_API_VERSION_PATCH , dav1d_version()) << endl;
+    const auto ver = dav1d_version();
+    if (!ver)
+        return false;
+    clog << LogLevel::Debug << fmt::to_string("dav1d api build version: %d.%d.%d, runtime abi version: %s", DAV1D_API_VERSION_MAJOR, DAV1D_API_VERSION_MINOR, DAV1D_API_VERSION_PATCH , ver) << endl;
     const auto& par = parameters();
     if (par.codec != "av1")
         return false;
