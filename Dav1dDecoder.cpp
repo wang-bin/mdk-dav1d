@@ -86,7 +86,7 @@ public:
     size_t stride() const override { return stride_;}
 };
 
-static VideoFrame from(shared_ptr<Dav1dPicture> picref)
+static VideoFrame from(const shared_ptr<Dav1dPicture>& picref)
 {
     const VideoFormat fmt = from(picref->p.layout, picref->seq_hdr);
     VideoFrame frame(picref->p.w, picref->p.h, fmt);
@@ -95,7 +95,7 @@ static VideoFrame from(shared_ptr<Dav1dPicture> picref)
         const size_t bytes = pitch*fmt.height(picref->p.h, i);
         frame.addBuffer(make_shared<PicturePlaneBuffer>((const uint8_t*)picref->data[i], bytes, pitch, picref));
     }
-    frame.setTimestamp(double(picref->m.timestamp)/1000.0);
+    frame.setTimestamp(double(picref->m.timestamp)/FrameTimeScaleForInt);
     // optional because will set by FrameReader
     ColorSpace cs;
     cs.primaries = ColorSpace::Primary(picref->seq_hdr->pri);
@@ -125,6 +125,7 @@ private:
 
 bool Dav1dDecoder::open()
 {
+    clog << LogLevel::Debug << fmt::to_string("dav1d api build version: %d.%d.%d", DAV1D_API_VERSION_MAJOR, DAV1D_API_VERSION_MINOR, DAV1D_API_VERSION_PATCH ) << endl;
     const auto ver = dav1d_version();
     if (!ver)
         return false;
@@ -195,7 +196,7 @@ int Dav1dDecoder::decode(const Packet& pkt)
                 delete pbuf;
                 return -3;
             }
-        data_->m.timestamp = int64_t(pkt.pts*TimeScaleForInt);
+        data_->m.timestamp = int64_t(pkt.pts*FrameTimeScaleForInt);
     }
     auto ret = dav1d_send_data(ctx_, data_.get());
     if (ret < 0 && ret != -EAGAIN)
@@ -204,7 +205,7 @@ int Dav1dDecoder::decode(const Packet& pkt)
         Dav1dPicturePtr pic(new Dav1dPicture{});
         ret = dav1d_get_picture(ctx_, pic.get());
         if (ret == 0) {
-            shared_ptr<Dav1dPicture> picref(std::move(pic));
+            const shared_ptr<Dav1dPicture> picref(std::move(pic));
             frameDecoded(from(picref));
         }
     } while(ret == 0);
