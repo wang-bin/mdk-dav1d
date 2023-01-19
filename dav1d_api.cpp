@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2021-2023 WangBin <wbsecg1 at gmail.com>
  */
 
 #if __has_include("dav1d/dav1d.h")
@@ -59,6 +59,15 @@ using dav1d_free_callback_t = void(*)(const uint8_t *buf, void *cookie);
 template<typename T> T default_rv() {return {};}
 template<> void default_rv<void>() {}
 
+inline string to_string(const wchar_t* ws)
+{
+    string s(snprintf(nullptr, 0, "%ls", ws), 0);
+    snprintf(&s[0], s.size() + 1, "%ls", ws);
+    return s;
+}
+
+inline string to_string(const char* s) { return s;}
+
 static auto load_dav1d()->decltype(dlopen(nullptr, RTLD_LAZY))
 {
     const auto name_default =
@@ -86,7 +95,7 @@ static auto load_dav1d()->decltype(dlopen(nullptr, RTLD_LAZY))
     auto dso = dlopen(name_default, RTLD_NOW | RTLD_LOCAL);
     if (dso)
         return dso;
-    clog << "Failed to load " << name_default << endl;
+    clog << "Failed to load " << to_string(name_default) << endl;
 #if !(_WIN32+0) && !(__ANDROID__+0)
     const auto name =
 # if (__APPLE__+0)
