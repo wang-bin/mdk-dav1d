@@ -8,6 +8,7 @@
 #define DAV1D_API
 #include "dav1d/dav1d.h"
 #include <cassert>
+#include <string>
 #include <iostream>
 # if __has_include("cppcompat/cstdlib.hpp")
 #   include "cppcompat/cstdlib.hpp"
@@ -68,19 +69,30 @@ inline string to_string(const wchar_t* ws)
 
 inline string to_string(const char* s) { return s;}
 
-static auto load_dav1d()->decltype(dlopen(nullptr, RTLD_LAZY))
+static auto libname(int version = -1)
 {
-    const auto name_default =
+    if (version < 0) {
+        return
 #if (_WIN32+0)
-        TEXT("libdav1d.dll")
+        basic_string<TCHAR>(TEXT("libdav1d.dll"))
 #elif (__APPLE__+0)
-        "libdav1d.6.dylib"
-#elif (__ANDROID__+0)
-        "libdav1d.so"
+        string("libdav1d.dylib")
 #else
-        "libdav1d.so.6"
+        string("libdav1d.so")
 #endif
         ;
+    }
+#if (_WIN32+0)
+    return L"libdav1d-" + to_wstring(version) + L".dll";
+#elif (__APPLE__+0)
+    return "libdav1d." + to_string(version) + ".dylib";
+#else
+    return "libdav1d.so." + to_string(version);
+#endif
+}
+
+static auto load_dav1d()->decltype(dlopen(nullptr, RTLD_LAZY))
+{
     const auto dso_env_a = std::getenv("DAV1D_LIB");
 #if (_WIN32+0)
     wchar_t dso_env_w[128+1]; // enough. strlen is not const expr
@@ -92,22 +104,20 @@ static auto load_dav1d()->decltype(dlopen(nullptr, RTLD_LAZY))
 #endif
     if (dso_env)
         return dlopen(dso_env, RTLD_NOW | RTLD_LOCAL);
-    auto dso = dlopen(name_default, RTLD_NOW | RTLD_LOCAL);
-    if (dso)
-        return dso;
-    clog << "Failed to load " << to_string(name_default) << endl;
-#if !(_WIN32+0) && !(__ANDROID__+0)
-    const auto name =
-# if (__APPLE__+0)
-        "libdav1d.5.dylib"
-# else
-        "libdav1d.so.5"
-# endif
-        ;
-    clog << "Try to load " << name << endl;
-    dso = dlopen(name, RTLD_NOW | RTLD_LOCAL);
-#endif
-    return dso;
+    invoke_result_t<decltype(libname), int> preName;
+    for (auto v : {
+        6, 5, -1
+    }) {
+        const auto name = libname(v);
+        if (preName == name)
+            continue;
+        preName = name;
+        clog << "Try to load dav1d runtime: " << to_string(name.data()) << endl;
+        if (auto dso = dlopen(name.data(), RTLD_NOW | RTLD_LOCAL))
+            return dso;
+    }
+    clog << "Failed to load dav1d runtime" << endl;
+    return nullptr;
 }
 
 static auto load_once()
