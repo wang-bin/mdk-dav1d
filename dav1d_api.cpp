@@ -51,7 +51,7 @@ using dav1d_free_callback_t = void(*)(const uint8_t *buf, void *cookie);
 #define DAV1D_API_EXPAND(EXPR) EXPR
 #define DAV1D_API_EXPAND_T_V(R, F, ARG_T, ARG_T_V, ARG_V) \
     R F ARG_T_V { \
-        static auto fp = (decltype(&F))dlsym(load_once(), #F); \
+        static const auto fp = (decltype(&(F)))dlsym(load_once(), #F); \
         if (!fp) \
             return default_rv<R>(); \
         return fp ARG_V; \

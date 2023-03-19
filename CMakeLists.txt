@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.15)
 if(POLICY CMP0025)
 # MUST call before project() and enable_language
   cmake_policy(SET CMP0025 NEW) # since 3.0, prefer AppleClang instead of Clang.
@@ -10,11 +10,11 @@ endif()
 project(mdk-dav1d VERSION 0.11.0 DESCRIPTION "mdk dav1d plugin")
 set(PROJECT_VERSION_TWEAK 0)
 if(CMAKE_PROJECT_NAME STREQUAL mdk) # build in source tree
-    include_directories(${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/video/hwa ${CMAKE_SOURCE_DIR})
+    include_directories(${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/video/interop ${CMAKE_SOURCE_DIR})
 else()
   # TODO: FindMDKAbi
 endif()
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
