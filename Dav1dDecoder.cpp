@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2021-2023 WangBin <wbsecg1 at gmail.com>
  * This file is part of MDK
  * MDK SDK: https://github.com/wang-bin/mdk-sdk
  * Free for opensource softwares or non-commercial use.
@@ -125,11 +125,10 @@ private:
 
 bool Dav1dDecoder::open()
 {
-    clog << LogLevel::Debug << fmt::to_string("dav1d api build version: %d.%d.%d", DAV1D_API_VERSION_MAJOR, DAV1D_API_VERSION_MINOR, DAV1D_API_VERSION_PATCH ) << endl;
     const auto ver = dav1d_version();
+    clog << LogLevel::Debug << fmt::to_string("dav1d api build version: %d.%d.%d, runtime abi version: %s", DAV1D_API_VERSION_MAJOR, DAV1D_API_VERSION_MINOR, DAV1D_API_VERSION_PATCH, ver ? ver : "?") << endl;
     if (!ver)
         return false;
-    clog << LogLevel::Debug << fmt::to_string("dav1d api build version: %d.%d.%d, runtime abi version: %s", DAV1D_API_VERSION_MAJOR, DAV1D_API_VERSION_MINOR, DAV1D_API_VERSION_PATCH , ver) << endl;
     const auto& par = parameters();
     if (par.codec != "av1")
         return false;
@@ -214,13 +213,17 @@ int Dav1dDecoder::decode(const Packet& pkt)
     return !pkt.isEnd() ? data_->sz : INT_MAX;
 }
 
-void register_video_decoders_dav1d() {
+static void register_video_decoders_dav1d() {
     VideoDecoder::registerOnce("dav1d", []{return new Dav1dDecoder();});
 }
-namespace { // DCE
-static const struct register_at_load_time_if_no_dce {
-    inline register_at_load_time_if_no_dce() { register_video_decoders_dav1d();}
-} s;
-}
 MDK_NS_END
+#else
+static void register_video_decoders_dav1d() {}
 #endif // __has_include("dav1d/dav1d.h")
+
+// project name must be dav1d or mdk-dav1d
+MDK_PLUGIN(dav1d) {
+    using namespace MDK_NS;
+    register_video_decoders_dav1d();
+    return MDK_ABI_VERSION;
+}
