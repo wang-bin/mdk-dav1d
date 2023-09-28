@@ -10,6 +10,7 @@
 #include <cassert>
 #include <string>
 #include <iostream>
+#include <vector>
 # if __has_include("cppcompat/cstdlib.hpp")
 #   include "cppcompat/cstdlib.hpp"
 # else
@@ -104,10 +105,15 @@ static auto load_dav1d()->decltype(dlopen(nullptr, RTLD_LAZY))
 #endif
     if (dso_env)
         return dlopen(dso_env, RTLD_NOW | RTLD_LOCAL);
+
+    vector<int> vs = {DAV1D_API_VERSION_MAJOR};
+    for (int v = 7; v >= 5; --v) {
+        if (v != DAV1D_API_VERSION_MAJOR)
+            vs.push_back(v);
+    }
+    vs.push_back(-1);
     invoke_result_t<decltype(libname), int> preName;
-    for (auto v : {
-        6, 5, -1
-    }) {
+    for (auto v : vs) {
         const auto name = libname(v);
         if (preName == name)
             continue;
