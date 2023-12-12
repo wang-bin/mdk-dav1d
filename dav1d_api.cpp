@@ -58,7 +58,7 @@ using dav1d_free_callback_t = void(*)(const uint8_t *buf, void *cookie);
         return fp ARG_V; \
     }
 
-template<typename T> T default_rv() {return {};}
+template<typename T> static T default_rv() {return {};}
 template<> void default_rv<void>() {}
 
 inline string to_string(const wchar_t* ws)
