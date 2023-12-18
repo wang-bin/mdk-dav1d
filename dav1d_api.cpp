@@ -85,6 +85,8 @@ static auto libname(int version = -1)
     }
 #if (_WIN32+0)
     return L"libdav1d-" + to_wstring(version) + L".dll";
+#elif defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) || defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__)
+    return "dav1d.framework/dav1d"s;
 #elif (__APPLE__+0)
     return "libdav1d." + to_string(version) + ".dylib";
 #else
@@ -134,6 +136,7 @@ static auto load_once()
 
 extern "C" {
 _DAV1D_API(const char*, dav1d_version, DAV1D_ARG0())
+_DAV1D_API(unsigned, dav1d_version_api, DAV1D_ARG0()) // 7
 _DAV1D_API(void, dav1d_default_settings, DAV1D_ARG1(Dav1dSettings*))
 _DAV1D_API(int, dav1d_open, DAV1D_ARG2(Dav1dContext**, const Dav1dSettings*))
 _DAV1D_API(int, dav1d_parse_sequence_header, DAV1D_ARG3(Dav1dSequenceHeader*, const uint8_t*, const size_t))
