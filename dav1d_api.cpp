@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2021-2024 WangBin <wbsecg1 at gmail.com>
  */
 
 #if __has_include("dav1d/dav1d.h")
@@ -11,6 +11,9 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#if (__APPLE__)
+# include <TargetConditionals.h>
+#endif
 # if __has_include("cppcompat/cstdlib.hpp")
 #   include "cppcompat/cstdlib.hpp"
 # else
@@ -85,7 +88,7 @@ static auto libname(int version = -1)
     }
 #if (_WIN32+0)
     return L"libdav1d-" + to_wstring(version) + L".dll";
-#elif defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) || defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__)
+#elif (TARGET_OS_IPHONE + 0) // iOS, tvOS, visionOS etc.
     return "dav1d.framework/dav1d"s;
 #elif (__APPLE__+0)
     return "libdav1d." + to_string(version) + ".dylib";

@@ -21,7 +21,10 @@ target_sources(${PROJECT_NAME} PRIVATE
 )
 
 if(APPLE)
-  target_link_libraries(${PROJECT_NAME} PUBLIC -L${CMAKE_CURRENT_SOURCE_DIR} -weak-ldav1d "-weak_framework dav1d")
+  if(CMAKE_SYSTEM_NAME STREQUAL Darwin) # link dylib first, then if link without loader(dav1d_api.cpp), dylib(not framework) will be used
+    target_link_libraries(${PROJECT_NAME} PUBLIC -L${CMAKE_CURRENT_SOURCE_DIR} -weak-ldav1d)
+  endif()
+  target_link_libraries(${PROJECT_NAME} PUBLIC -L${CMAKE_CURRENT_SOURCE_DIR} "-weak_framework dav1d")
 endif()
 if(NOT WIN32)
   target_link_libraries(${PROJECT_NAME} PUBLIC dl)
