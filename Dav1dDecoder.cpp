@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2021-2024 WangBin <wbsecg1 at gmail.com>
  * This file is part of MDK
  * MDK SDK: https://github.com/wang-bin/mdk-sdk
  * Free for opensource softwares or non-commercial use.
@@ -52,24 +52,19 @@ static PixelFormat from(Dav1dPixelLayout dp, const Dav1dSequenceHeader* hdr)
     return PixelFormat::Unknown;
 }
 
-struct Dav1dDataDeleter {
-    void operator()(void* x) const {
-        auto* data = static_cast<Dav1dData*>(x);
-        dav1d_data_unref(data);
-        delete data;
+struct Dav1dDeleter {
+    void operator()(Dav1dData* x) const {
+        dav1d_data_unref(x);
+        delete x;
+    }
+    void operator()(Dav1dPicture* x) const {
+        dav1d_picture_unref(x);
+        delete x;
     }
 };
 
-struct Dav1dPictureDeleter {
-    void operator()(void* x) const {
-        auto* pic = static_cast<Dav1dPicture*>(x);
-        dav1d_picture_unref(pic);
-        delete pic;
-    }
-};
-
-using Dav1dDataPtr = unique_ptr<Dav1dData, Dav1dDataDeleter>;
-using Dav1dPicturePtr = unique_ptr<Dav1dPicture, Dav1dPictureDeleter>;
+using Dav1dDataPtr = unique_ptr<Dav1dData, Dav1dDeleter>;
+using Dav1dPicturePtr = unique_ptr<Dav1dPicture, Dav1dDeleter>;
 
 
 class PicturePlaneBuffer final : public Buffer2D {
@@ -128,7 +123,7 @@ bool Dav1dDecoder::open()
     const auto ver = dav1d_version();
     const auto rtver = dav1d_version_api();
 
-    clog << LogLevel::Debug << fmt::to_string("dav1d api build version: %d.%d.%d, runtime api: %d.%d.%d abi: %s"
+    clog << fmt::to_string("dav1d api build version: %d.%d.%d, runtime api: %d.%d.%d abi: %s"
         , DAV1D_API_VERSION_MAJOR, DAV1D_API_VERSION_MINOR, DAV1D_API_VERSION_PATCH
         , (rtver >> 16) & 0xff, (rtver >> 8) & 0xff, rtver & 0xff
         , ver ? ver : "?") << endl;
@@ -148,10 +143,10 @@ bool Dav1dDecoder::open()
         va_end(tmp); // required
         if (vamsg.back() == '\n')
             vamsg.pop_back();
-        clog << "dav1d: " << vamsg << endl;
+        clog << "dav1d: " + vamsg << endl;
     }};
     const int major = dav1d_version()[0] - '0';
-    int threads = std::stoi(property("threads", "0"));
+    int threads = std::stoi(get_or("threads", "0"));
     if (major > 0) {
         auto s1 = (int*)&s;
         auto& n_threads = s1[0];
@@ -162,11 +157,11 @@ bool Dav1dDecoder::open()
         if (threads <= 0)
             threads = thread::hardware_concurrency();
         auto& n_tile_threads = s0[1];
-        n_tile_threads = std::stoi(property("tile_threads", "0"));
+        n_tile_threads = std::stoi(get_or("tile_threads", "0"));
         if (n_tile_threads <= 0)
             n_tile_threads = std::min<int>((int)floor(sqrt(threads)), DAV1D_MAX_TILE_THREADS);
         auto& n_frame_threads = s0[0];
-        n_frame_threads = std::stoi(property("frame_threads", "0"));
+        n_frame_threads = std::stoi(get_or("frame_threads", "0"));
         if (n_frame_threads <= 0)
             n_frame_threads = std::min<int>(ceil(threads/n_tile_threads), DAV1D_MAX_FRAME_THREADS);
         clog << fmt::to_string("frame threads: %d, tile threads: %d", n_frame_threads, n_tile_threads) << endl;
