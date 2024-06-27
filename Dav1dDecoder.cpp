@@ -73,7 +73,7 @@ class PicturePlaneBuffer final : public Buffer2D {
     size_t stride_;
     shared_ptr<Dav1dPicture> bufs_;
 public:
-    PicturePlaneBuffer(const uint8_t* data, size_t size, int stride, shared_ptr<Dav1dPicture> ref)
+    PicturePlaneBuffer(const uint8_t* data, size_t size, int stride, const shared_ptr<Dav1dPicture>& ref)
         : data_(data), size_(size), stride_(stride), bufs_(ref)
     {}
     const Byte* constData() const override {return data_;}
@@ -104,6 +104,9 @@ static VideoFrame from(const shared_ptr<Dav1dPicture>& picref)
 class Dav1dDecoder final : public VideoDecoder
 {
 public:
+    Dav1dDecoder() {
+        set(Options::Default);
+    }
     const char* name() const override {return "dav1d";}
     bool open() override;
     bool close() override {
@@ -132,6 +135,8 @@ bool Dav1dDecoder::open()
     const auto& par = parameters();
     if (par.codec != "av1")
         return false;
+    preprocess(par.extra);
+
     Dav1dSettings s;
     dav1d_default_settings(&s);
     s.logger = {nullptr, [](void* cookie, const char* fmt, va_list vl) {
@@ -185,6 +190,7 @@ bool Dav1dDecoder::flush()
 
 int Dav1dDecoder::decode(const Packet& pkt)
 {
+    preprocess(pkt);
     if (!data_->sz && !pkt.isEnd()) {
         auto pbuf = new BufferRef(pkt.buffer);
         if (dav1d_data_wrap(data_.get(), pkt.buffer->data(), pkt.buffer->size()
