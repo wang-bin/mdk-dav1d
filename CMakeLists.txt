@@ -10,7 +10,7 @@ if(NOT CMAKE_PROJECT_NAME STREQUAL mdk) # not build in source tree
 endif()
 find_package(MDK)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 setup_mdk_plugin(${PROJECT_NAME} STATIC)
