@@ -73,12 +73,15 @@ inline string to_string(const wchar_t* ws)
 
 inline string to_string(const char* s) { return s;}
 
+// Dav1d.framework, dav1d.framework: for case insensitive build env, will link only 1 framework, but we can load any provided by app.
 static auto libname(int version = -1)
 {
     if (version < 0) {
         return
 #if (_WIN32+0)
         basic_string<TCHAR>(TEXT("libdav1d.dll"))
+#elif (TARGET_OS_IPHONE + 0) // iOS, tvOS, visionOS etc.
+        "Dav1d.framework/Dav1d"s; // compatible with media-kit
 #elif (__APPLE__+0)
         string("libdav1d.dylib")
 #else
@@ -123,11 +126,15 @@ static auto load_dav1d()->decltype(dlopen(nullptr, RTLD_LAZY))
         if (preName == name)
             continue;
         preName = name;
-        clog << "Try to load dav1d runtime: " << to_string(name.data()) << endl;
+        clog << "Try to load dav1d runtime: " + to_string(name.data()) << endl;
         if (auto dso = dlopen(name.data(), RTLD_NOW | RTLD_LOCAL))
             return dso;
     }
     clog << "Failed to load dav1d runtime" << endl;
+#if !defined(_WIN32)
+    if (const auto error = dlerror())
+        std::clog << "dlopen error: " << error << std::endl; // null crash
+#endif
     return nullptr;
 }
 
