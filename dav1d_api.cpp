@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 WangBin <wbsecg1 at gmail.com>
+ * Copyright (c) 2021-2025 WangBin <wbsecg1 at gmail.com>
  */
 
 #if __has_include("dav1d/dav1d.h")
@@ -64,13 +64,15 @@ using dav1d_free_callback_t = void(*)(const uint8_t *buf, void *cookie);
 template<typename T> static T default_rv() {return {};}
 template<> void default_rv<void>() {}
 
-inline string to_string(const wchar_t* ws)
+[[maybe_unused]]
+static inline string to_string(const wchar_t* ws)
 {
     string s(snprintf(nullptr, 0, "%ls", ws), 0);
     snprintf(&s[0], s.size() + 1, "%ls", ws);
     return s;
 }
 
+[[maybe_unused]]
 inline string to_string(const char* s) { return s;}
 
 // Dav1d.framework, dav1d.framework: for case insensitive build env, will link only 1 framework, but we can load any provided by app.

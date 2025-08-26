@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(mdk-dav1d VERSION 0.22.0 DESCRIPTION "mdk dav1d plugin")
+project(mdk-dav1d VERSION 0.33.2 DESCRIPTION "mdk dav1d plugin")
 set(PROJECT_VERSION_TWEAK 0)
 
 set(MDKSDK "${CMAKE_BINARY_DIR}/mdk-sdk" CACHE STRING "libmdk SDK dir")
