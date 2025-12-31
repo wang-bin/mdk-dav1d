@@ -31,8 +31,8 @@ MDK_NS_BEGIN
 // bpc = 8, 10 no 12
 static PixelFormat from(Dav1dPixelLayout dp, const Dav1dSequenceHeader* hdr)
 {
-    if (dp == DAV1D_PIXEL_LAYOUT_I444 && hdr->mtrx == DAV1D_MC_IDENTITY &&
-        hdr->pri  == DAV1D_COLOR_PRI_BT709 && hdr->trc  == DAV1D_TRC_SRGB) {
+    if (dp == DAV1D_PIXEL_LAYOUT_I444 && (!hdr->color_description_present ||
+        (hdr->mtrx == DAV1D_MC_IDENTITY && hdr->pri  == DAV1D_COLOR_PRI_BT709 && hdr->trc  == DAV1D_TRC_SRGB))) {
         const PixelFormat gbrp[] = { PixelFormat::GBRP, PixelFormat::GBRP10LE, PixelFormat::GBRP12LE };
         return gbrp[hdr->hbd];
     }
@@ -93,9 +93,11 @@ static VideoFrame from(const shared_ptr<Dav1dPicture>& picref)
     frame.setTimestamp(double(picref->m.timestamp)/FrameTimeScaleForInt);
     // optional because will set by FrameReader
     ColorSpace cs;
-    cs.primaries = ColorSpace::Primary(picref->seq_hdr->pri);
-    cs.transfer = ColorSpace::Transfer(picref->seq_hdr->trc);
-    cs.matrix = ColorSpace::Matrix(picref->seq_hdr->mtrx);
+    if (picref->seq_hdr->color_description_present) {
+        cs.primaries = ColorSpace::Primary(picref->seq_hdr->pri);
+        cs.transfer = ColorSpace::Transfer(picref->seq_hdr->trc);
+        cs.matrix = ColorSpace::Matrix(picref->seq_hdr->mtrx);
+    }
     cs.range = picref->seq_hdr->color_range ? ColorSpace::Range::Full : ColorSpace::Range::Limited;
     frame.setColorSpace(cs, true);
     // TODO: picref->itut_t35
